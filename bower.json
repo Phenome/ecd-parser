@@ -2,6 +2,7 @@
   "name": "ecd-parser",
   "description": "Parses ecd (Escrituração Contábil Digital) files into a JS Object",
   "main": "ecd-parser.html",
+  "version": "0.0.1",
   "keywords": [
     "web-components"
   ],

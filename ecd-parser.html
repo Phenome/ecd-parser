@@ -1,0 +1,138 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+
+<!--
+`ecd-parser`
+Parses ECD (Escrituração Contábil Digital) files into a JS Object
+
+@demo demo/index.html 
+-->
+
+<dom-module id="ecd-parser">
+  <script>
+    var _parseNumber = function(n_str, cd) {
+      var n = (n_str.replace(',','.'))*(cd==='D'?-1:1)
+      //round up
+      if (n < 0.005 && n > -0.005) n = 0
+      return n
+    }, _parseDate = function(dt_str) {
+      return new Date(
+        dt_str.slice(-4)*1,
+        dt_str.slice(2, 4)*1-1,
+        dt_str.slice(0, 2)*1)
+    }, _reducer = function(obj, line) {
+      var _info, info = line.split('|')
+      switch(info[1]) {
+        case '0000':
+          obj.periodo = {
+            inicio: _parseDate(info[3]),
+            fim: _parseDate(info[4])
+          }
+          obj.empresa = info[5]
+          break
+        case 'I050':
+          obj.pl_contas[info[6]] = {
+            sintetica: info[4]==='S',
+            analitica: info[4]==='A',
+            pai: info[7],
+            descricao: info[8]
+          }
+          break
+        case 'I155':
+          _info = obj.pl_contas[info[2]]
+          _info.saldo_anterior = _parseNumber(info[4], info[5])
+          _info.debitos = _parseNumber(info[6],'C')
+          _info.creditos = _parseNumber(info[7],'C')
+          _info.saldo_final = _parseNumber(info[8], info[9])
+          break
+        case 'I200':
+          if (obj._lcto) {
+            obj.lancamentos.push(obj._lcto)
+          }
+          obj._lcto = {
+            data: _parseDate(info[3]),
+            documento: info[2],
+            valor: _parseNumber(info[3]),
+            pernas: []
+          }
+          break
+        case 'I250':
+          obj._lcto.pernas.push({
+            conta: info[2],
+            valor: _parseNumber(info[4],info[5]),
+            historico: info[8]
+          })
+          break
+        case 'J930':
+          obj.responsaveis.push({
+            nome: info[2],
+            cpf: info[3],
+            cargo: info[4],
+            documento: info[6],
+            email: info[7],
+            telefone: info[8],
+            estado: info[9]
+          })
+          break
+        case '9999':
+          if (obj._lcto) {
+            obj.lancamentos.push(obj._lcto)
+            delete obj._lcto
+          }
+          break
+      }
+      return obj
+    }
+    Polymer({
+      is: 'ecd-parser',
+      properties: {
+        /** 
+        * The file blob. Will auto parse when changed.
+        * @type {Blob}
+        */
+        blob: {
+          type: Object,
+          value: null,
+          observer: 'parse'
+        },
+        /** The processed/parsed resulting object */
+        data: {
+          type: Object,
+          value: null,
+          readOnly: true,
+          notify: true
+        }
+      },
+      /**
+      * @param {Blob} blob The file blob
+      * @return {Promise} Promise that resolves with the JS Object
+      */
+      parse: function(blob) {
+        if (!blob) return Promise.resolve(null)
+        var _that = this
+        return new Promise(function(resolve, reject) {
+          var fr        
+          fr = new FileReader()
+          fr.onload = function(e) {resolve(e.target.result)}
+          fr.readAsText(blob, 'latin1')
+        }).then(function(str) {
+          return str
+          .replace(/[\r\n]+/g,'\n')
+          .split('\n')
+          .reduce(_reducer, {
+            lancamentos: [],
+            responsaveis: [],
+            pl_contas: {}
+          })
+        }).then(function(obj) {
+          _that._setData(obj)
+          _that.fire('data', obj)
+        }).catch(function() { return null })
+      }
+      /**
+      * Fired when parsing is done and `data` is available.
+      *
+      * @event data
+      */
+    })
+  </script>
+</dom-module>

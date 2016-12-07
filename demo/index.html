@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>ecd-parser demo</title>
+
+    <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
+
+    <link rel="import" href="../bower_components/iron-demo-helpers/demo-pages-shared-styles.html">
+    <link rel="import" href="../bower_components/iron-demo-helpers/demo-snippet.html">
+    <link rel="import" href="../ecd-parser.html">
+
+    <style is="custom-style" include="demo-pages-shared-styles">
+    </style>
+  </head>
+  <body>
+    
+    <dom-module id="x-demo">
+      <template>   
+        <button on-tap="_selectImg">Select ECD file</button><br/>
+        <input
+          id="fileInput"
+          on-change="_onFileChange"
+          type="file"
+          accept=".txt"
+          hidden>
+          <ecd-parser blob="[[blob]]" data="{{data}}"></ecd-parser>
+          <span><b>Empresa:</b> {{data.empresa}}</span><br/>
+          <span><b>Responsável 1:</b> {{data.responsaveis.0.nome}} ({{data.responsaveis.0.cargo}})</span><br/>
+          <span><b>Responsável 2:</b> {{data.responsaveis.1.nome}} ({{data.responsaveis.1.cargo}})</span><br/>
+          <span><b># Lançamentos:</b> {{data.lancamentos.length}}</span><br/>
+      </template>
+      <script>
+        Polymer({
+          is: 'x-demo',
+          _selectImg: function() {
+            // Inspired by https://github.com/winhowes/file-upload/
+            var elem = this.$.fileInput;
+            if (elem && document.createEvent) { // sanity check
+              var evt = document.createEvent('MouseEvents');
+              evt.initEvent('click', true, false);
+              elem.dispatchEvent(evt);
+            }
+          },
+          _onFileChange: function(e) {
+            if (!this.$.fileInput.files) return        
+            this.set('blob',this.$.fileInput.files[0])
+          }
+        });
+      </script>
+    </dom-module>
+    
+    <div class="vertical-section-container centered">
+      <h3>Basic ecd-parser demo</h3>
+      <x-demo></x-demo>
+      <demo-snippet>
+        <template>
+          <ecd-parser blob="[[blob]]" data="{{data}}"></ecd-parser>
+        </template>
+      </demo-snippet>
+    </div>
+  </body>
+</html>
